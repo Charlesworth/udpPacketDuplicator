@@ -3,48 +3,47 @@ package main
 import (
 	"log"
 	"net"
+	"os"
 )
 
 var MTU = 1000
 
 func main() {
-	sock := initSocket(":8090")
-	defer sock.Close()
-	remoteAddr1, err := net.ResolveUDPAddr("udp", "127.0.0.1:8091")
-	remoteAddr2, err := net.ResolveUDPAddr("udp", "127.0.0.1:8092")
+
+	host, remotes, err := getPorts(os.Args)
+	checkErr(err)
+
+	hostConn, err := net.ListenUDP("udp", host)
+	checkErr(err)
+	defer hostConn.Close()
+
+	proxy(hostConn, remotes)
+}
+
+func checkErr(err error) {
 	if err != nil {
-		log.Fatal("bad forward addresss", err)
-	}
-
-	for {
-		buffer := make([]byte, MTU)
-		// buffer := []byte{}
-
-		bytes, _, err := sock.ReadFromUDP(buffer)
-		if err != nil {
-			log.Fatal("unable to read UDP packet payload due to error:", err)
-		}
-		if bytes == 0 {
-			log.Fatal("unable to read UDP packet, zero bytes in size")
-		}
-		buffer = buffer[:bytes]
-
-		// send a plain UDP message back
-		sock.WriteToUDP(buffer[0:bytes], remoteAddr1)
-		sock.WriteToUDP(buffer[0:bytes], remoteAddr2)
+		log.Fatalln("Fatal Error:", err)
 	}
 }
 
-func initSocket(port string) *net.UDPConn {
-	localAddr, err := net.ResolveUDPAddr("udp", port)
-	if err != nil {
-		log.Fatal("error resolving local IP port ", port, ":", err)
-	}
+func proxy(sock *net.UDPConn, forwards []*net.UDPAddr) {
+	buffer := make([]byte, MTU)
 
-	socket, err := net.ListenUDP("udp", localAddr)
-	if err != nil {
-		log.Fatal("Error starting listenUDP server:", err)
-	}
+	for {
+		bytes, _, err := sock.ReadFromUDP(buffer)
+		if err != nil {
+			log.Println("Error: unable to read UDP packet payload:", err)
+			continue
+		}
+		if bytes == 0 {
+			log.Println("Error: unable to read UDP packet, zero bytes in size")
+			continue
+		}
 
-	return socket
+		buffer = buffer[:bytes]
+
+		for _, addr := range forwards {
+			sock.WriteToUDP(buffer[0:bytes], addr)
+		}
+	}
 }
