@@ -6,17 +6,19 @@ import (
 	"os"
 )
 
-var MTU = 1000
+var MTU = 1490
 
 func main() {
-
-	host, remotes, err := getPorts(os.Args)
+	host, remotes, err := getPorts(os.Args[1:])
 	checkErr(err)
 
 	hostConn, err := net.ListenUDP("udp", host)
 	checkErr(err)
 	defer hostConn.Close()
 
+	log.Println("UDP Packet Duplicator")
+	log.Println("Host Port:", host)
+	log.Println("Remote Ports:", remotes)
 	proxy(hostConn, remotes)
 }
 
@@ -40,7 +42,7 @@ func proxy(sock *net.UDPConn, forwards []*net.UDPAddr) {
 			continue
 		}
 
-		buffer = buffer[:bytes]
+		log.Println("Forwarding", bytes, " byte packet")
 
 		for _, addr := range forwards {
 			sock.WriteToUDP(buffer[0:bytes], addr)

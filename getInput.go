@@ -17,7 +17,7 @@ func getPorts(inputStrings []string) (hostPort *net.UDPAddr, remotePorts []*net.
 			return nil, nil, err
 		}
 
-		if i == 1 {
+		if i == 0 {
 			hostPort = addr
 		} else {
 			remotePorts = append(remotePorts, addr)
