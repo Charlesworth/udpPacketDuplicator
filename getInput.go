@@ -1,14 +1,14 @@
 package main
 
 import (
-	"errors"
+	"log"
 	"net"
 	"os"
 )
 
 func getPorts(inputStrings []string) (hostPort *net.UDPAddr, remotePorts []*net.UDPAddr, err error) {
-	if len(inputStrings) < 2 {
-		return nil, nil, errors.New("Require at least 2 ports as input arguements")
+	if len(inputStrings) < 2 || inputStrings[1] == "-h" {
+		help()
 	}
 
 	for i, addrString := range os.Args[1:] {
@@ -25,4 +25,11 @@ func getPorts(inputStrings []string) (hostPort *net.UDPAddr, remotePorts []*net.
 	}
 
 	return
+}
+
+func help() {
+	log.Println("UDP Packet Duplicator")
+	log.Println("Usage: udpPacketDuplicator [:hostPort] [:remotePort]...")
+
+	os.Exit(0)
 }
