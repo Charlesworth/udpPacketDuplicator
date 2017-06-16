@@ -6,30 +6,22 @@ import (
 	"os"
 )
 
-func getPorts(inputStrings []string) (hostPort *net.UDPAddr, remotePorts []*net.UDPAddr, err error) {
-	if len(inputStrings) < 2 || inputStrings[1] == "-h" {
-		help()
-	}
-
-	for i, addrString := range os.Args[1:] {
+func toPorts(inputStrings []string) (ports []*net.UDPAddr, err error) {
+	for _, addrString := range inputStrings {
 		addr, err := net.ResolveUDPAddr("udp", addrString)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
-		if i == 0 {
-			hostPort = addr
-		} else {
-			remotePorts = append(remotePorts, addr)
-		}
+		ports = append(ports, addr)
 	}
-
 	return
 }
 
-func help() {
-	log.Println("UDP Packet Duplicator")
-	log.Println("Usage: udpPacketDuplicator [:hostPort] [:remotePort]...")
-
-	os.Exit(0)
+func checkInput(input []string) {
+	if len(input) < 2 || input[1] == "-h" {
+		log.Println("UDP Packet Duplicator")
+		log.Println("Usage: udpPacketDuplicator [:hostPort] [:remotePort]...")
+		os.Exit(0)
+	}
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"net"
+	// _ "net/http/pprof"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -10,10 +11,19 @@ import (
 var bufferSize = 1490
 
 func main() {
-	log.Infoln("UDP Packet Duplicator")
+	// add the following to provide profiling
+	// go func() {
+	// 	log.Println(http.ListenAndServe("localhost:6060", nil))
+	// }()
 
-	host, remotes, err := getPorts(os.Args[1:])
+	log.Infoln("UDP Packet Duplicator")
+	checkInput(os.Args[1:])
+
+	ports, err := toPorts(os.Args[1:])
 	checkErr(err)
+
+	host := ports[0]
+	remotes := ports[1:]
 
 	log.Infoln("Host Port:", host)
 	log.Infoln("Remote Ports:", remotes)
