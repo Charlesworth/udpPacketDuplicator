@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"fmt"
 	"net"
 	"testing"
 )
@@ -72,5 +74,27 @@ func TestBasicDoubleTargetProxy(t *testing.T) {
 		t.Error("Target endpoint 2 did not recieve correct payload",
 			"\nexpected:", testString,
 			"\nrecieved:", string(testBuffer1[:bytes]))
+	}
+}
+
+func BenchmarkProxy(b *testing.B) {
+	ports, err := toPorts([]string{":8005", ":8006", ":8007"})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	hostConn, err := net.ListenUDP("udp", ports[0])
+
+	// send a test packet
+	testByte := make([]byte, 1024)
+	rand.Read(testByte)
+	fmt.Println(testByte)
+
+	buffer := make([]byte, bufferSize)
+
+	// run the Fib function b.N times
+	for n := 0; n < b.N; n++ {
+		hostConn.WriteToUDP(testByte, ports[0])
+		proxyPacket(hostConn, ports[1:], buffer)
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net"
 	// _ "net/http/pprof"
 	"os"
@@ -43,26 +44,31 @@ func checkErr(err error) {
 
 func proxy(sock *net.UDPConn, forwards []*net.UDPAddr) {
 	buffer := make([]byte, bufferSize)
-
 	for {
-		bytes, _, err := sock.ReadFromUDP(buffer)
+		err := proxyPacket(sock, forwards, buffer)
 		if err != nil {
 			log.Errorln(err)
-			continue
-		}
-		if bytes == 0 {
-			log.Errorln("zero byte packet")
-			continue
-		}
-
-		log.Infoln(bytes, "byte packet recieved, forwarding")
-
-		for _, addr := range forwards {
-			_, err := sock.WriteToUDP(buffer[0:bytes], addr)
-			if err != nil {
-				log.Errorln(err)
-				continue
-			}
 		}
 	}
+}
+
+func proxyPacket(sock *net.UDPConn, forwards []*net.UDPAddr, buffer []byte) error {
+	bytes, _, err := sock.ReadFromUDP(buffer)
+	if err != nil {
+		return err
+	}
+	if bytes == 0 {
+		return errors.New("zero byte packet")
+	}
+
+	log.Infoln(bytes, "byte packet recieved, forwarding")
+
+	for _, addr := range forwards {
+		_, err := sock.WriteToUDP(buffer[0:bytes], addr)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
