@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var bufferSize = 1490
+var bufferSize = 1500
 
 func main() {
 	// add the following to provide profiling
@@ -44,15 +44,20 @@ func checkErr(err error) {
 
 func proxy(sock *net.UDPConn, forwards []*net.UDPAddr) {
 	buffer := make([]byte, bufferSize)
+	t1 := make(chan []byte, 100)
+	t2 := make(chan []byte, 100)
+	chanSlice := []chan []byte{t1, t2}
+	go sender(forwards[0], t1)
+	go sender(forwards[1], t2)
 	for {
-		err := proxyPacket(sock, forwards, buffer)
+		err := proxyPacket(sock, chanSlice, buffer)
 		if err != nil {
 			log.Errorln(err)
 		}
 	}
 }
 
-func proxyPacket(sock *net.UDPConn, forwards []*net.UDPAddr, buffer []byte) error {
+func proxyPacket(sock *net.UDPConn, forwards []chan []byte, buffer []byte) error {
 	bytes, _, err := sock.ReadFromUDP(buffer)
 	if err != nil {
 		return err
@@ -64,11 +69,24 @@ func proxyPacket(sock *net.UDPConn, forwards []*net.UDPAddr, buffer []byte) erro
 	log.Infoln(bytes, "byte packet recieved, forwarding")
 
 	for _, addr := range forwards {
-		_, err := sock.WriteToUDP(buffer[0:bytes], addr)
-		if err != nil {
-			return err
-		}
+		addr <- buffer
 	}
 
 	return nil
+}
+
+func sender(to *net.UDPAddr, get chan []byte) {
+	buffer := make([]byte, bufferSize)
+	conn, err := net.Dial("udp", "127.0.0.1:1234")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	for {
+		buffer = <-get
+		_, err := conn.Write(buffer)
+		if err != nil {
+			log.Errorln(err)
+		}
+	}
 }
