@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"testing"
+	"time"
 )
 
 // func TestBasicSingleTargetProxy(t *testing.T) {
@@ -91,16 +92,18 @@ func BenchmarkProxy(b *testing.B) {
 	fmt.Println(testByte)
 
 	buffer := make([]byte, bufferSize)
-	t1 := make(chan []byte, 100)
-	t2 := make(chan []byte, 100)
+	t1 := make(chan []byte, 1000)
+	t2 := make(chan []byte, 1000)
 	chanSlice := []chan []byte{t1, t2}
 
-	go sender(ports[1], t1)
-	go sender(ports[2], t2)
+	go sender(ports[1], t1, "8006")
+	go sender(ports[2], t2, "8007")
 
 	// run the Fib function b.N times
 	for n := 0; n < b.N; n++ {
 		hostConn.WriteToUDP(testByte, ports[0])
 		proxyPacket(hostConn, chanSlice, buffer)
 	}
+
+	time.Sleep(time.Second)
 }

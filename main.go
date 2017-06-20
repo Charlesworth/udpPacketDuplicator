@@ -44,11 +44,11 @@ func checkErr(err error) {
 
 func proxy(sock *net.UDPConn, forwards []*net.UDPAddr) {
 	buffer := make([]byte, bufferSize)
-	t1 := make(chan []byte, 100)
-	t2 := make(chan []byte, 100)
+	t1 := make(chan []byte, 1000)
+	t2 := make(chan []byte, 1000)
 	chanSlice := []chan []byte{t1, t2}
-	go sender(forwards[0], t1)
-	go sender(forwards[1], t2)
+	go sender(forwards[0], t1, "9000")
+	go sender(forwards[1], t2, "9001")
 	for {
 		err := proxyPacket(sock, chanSlice, buffer)
 		if err != nil {
@@ -66,7 +66,7 @@ func proxyPacket(sock *net.UDPConn, forwards []chan []byte, buffer []byte) error
 		return errors.New("zero byte packet")
 	}
 
-	log.Infoln(bytes, "byte packet recieved, forwarding")
+	// log.Infoln(bytes, "byte packet recieved, forwarding")
 
 	for _, addr := range forwards {
 		addr <- buffer
@@ -75,18 +75,21 @@ func proxyPacket(sock *net.UDPConn, forwards []chan []byte, buffer []byte) error
 	return nil
 }
 
-func sender(to *net.UDPAddr, get chan []byte) {
+func sender(to *net.UDPAddr, get chan []byte, port string) {
 	buffer := make([]byte, bufferSize)
-	conn, err := net.Dial("udp", "127.0.0.1:1234")
+	conn, err := net.Dial("udp", "127.0.0.1:"+port)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	for {
 		buffer = <-get
-		_, err := conn.Write(buffer)
+		n, err := conn.Write(buffer)
 		if err != nil {
 			log.Errorln(err)
+		}
+		if n == 0 {
+			log.Errorln("n was rubbish mate")
 		}
 	}
 }
